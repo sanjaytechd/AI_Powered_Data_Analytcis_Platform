@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Insights Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 50%, #f0f4f8 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 12px;
+            padding: 12px;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+            border-right: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+            border-radius: 15px;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-header {
+            padding: 20px 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background: #2c3e50;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #e8f4f8;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(26, 77, 109, 0.2);
+        }
+        
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 77, 109, 0.3);
+            background: #1a2f3f;
+        }
+        
+        .new-chat-btn:active {
+            transform: translateY(0);
+        }
+        
+        .conversation-list {
+            flex: 1;
+            padding: 12px 8px;
+            overflow-y: auto;
+        }
+        
+        .conversation-item-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            margin: 6px 0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .conversation-item-wrapper:hover {
+            background: rgba(26, 77, 109, 0.08);
+        }
+        
+        .conversation-item-wrapper.active {
+            background: linear-gradient(135deg, rgba(26, 77, 109, 0.15) 0%, rgba(44, 95, 127, 0.15) 100%);
+        }
+        
+        .conversation-item {
+            flex: 1;
+            padding: 8px 8px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #475569;
+            text-align: left;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        
+        .conversation-item:hover {
+            color: #1a4d6d;
+        }
+        
+        .conversation-item-wrapper.active .conversation-item {
+            color: #1a4d6d;
+            font-weight: 600;
+        }
+        
+        .delete-chat-btn {
+            padding: 6px 8px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #9ca3af;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            opacity: 0;
+        }
+        
+        .conversation-item-wrapper:hover .delete-chat-btn {
+            opacity: 1;
+            color: #ef4444;
+        }
+        
+        .delete-chat-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .delete-chat-btn:active {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            gap: 8px;
+        }
+        
+        .sidebar-footer button {
+            flex: 1;
+            padding: 10px 12px;
+            background: rgba(26, 77, 109, 0.1);
+            border: 1px solid rgba(26, 77, 109, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #1a4d6d;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-footer button:hover {
+            background: rgba(26, 77, 109, 0.15);
+            border-color: rgba(26, 77, 109, 0.5);
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            padding: 20px 32px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: #1f2937;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1a4d6d 0%, #2c5f7f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .welcome-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: #9ca3af;
+        }
+        
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            color: #1a4d6d;
+            margin-bottom: 24px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+        
+        .welcome-section:hover .welcome-icon {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        
+        .welcome-section h2 {
+            font-size: 32px;
+            color: #1f2937;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .welcome-section p {
+            font-size: 16px;
+            color: #9ca3af;
+            margin-bottom: 32px;
+        }
+        
+        .message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1a4d6d 0%, #2c5f7f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+            box-shadow: 0 6px 20px rgba(26, 77, 109, 0.25);
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+            color: #1a4d6d;
+            border: 1.5px solid rgba(26, 77, 109, 0.15);
+            box-shadow: 0 4px 12px rgba(26, 77, 109, 0.15);
+        }
+        
+        .message-content {
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .message.assistant .message-content {
+            max-width: 90%;
+        }
+        
+        .message.user .message-content {
+            align-items: flex-end;
+        }
+        
+        .message-bubble {
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #1f2937;
+        }
+        
+        .message.assistant .message-bubble {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%);
+            color: #1f2937;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #1a4d6d 0%, #2c5f7f 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(26, 77, 109, 0.3);
+        }
+        
+        /* Input Section */
+        .input-section {
+            padding: 24px 32px 32px;
+        }
+        
+        .chart-options {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 13px;
+            color: #6b7280;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .chart-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 26px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+            transition: 0.3s;
+            border-radius: 26px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 2px;
+            top: 2px;
+            background: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input:checked + .slider {
+            background: linear-gradient(135deg, #1a4d6d 0%, #2c5f7f 100%);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+        
+        .chart-type-select {
+            padding: 8px 12px;
+            border: 1px solid rgba(26, 77, 109, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .chart-type-select:hover {
+            border-color: rgba(26, 77, 109, 0.6);
+            background: rgba(26, 77, 109, 0.05);
+        }
+        
+        .file-name {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 0;
+        }
+        
+        .file-name.empty {
+            color: #9ca3af;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .upload-icon-btn {
+            padding: 0;
+            background: rgba(26, 77, 109, 0.1);
+            border: 1px solid rgba(26, 77, 109, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+            color: #1a4d6d;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            font-size: 22px;
+            flex-shrink: 0;
+            min-width: 48px;
+        }
+
+        .upload-icon-btn:hover:not(:disabled) {
+            background: rgba(26, 77, 109, 0.2);
+            border-color: rgba(26, 77, 109, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .query-input-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #queryInput {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(26, 77, 109, 0.3);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            max-height: 100px;
+            transition: all 0.2s ease;
+            background: white;
+            color: #1f2937;
+        }
+        
+        #queryInput:focus {
+            outline: none;
+            border-color: #1a4d6d;
+            box-shadow: 0 0 0 3px rgba(26, 77, 109, 0.1);
+            background: white;
+        }
+        
+        #queryInput:disabled {
+            background: #f3f4f6;
+            cursor: not-allowed;
+            color: #9ca3af;
+        }
+        
+        .send-btn {
+            padding: 0;
+            background: rgba(26, 77, 109, 0.1);
+            border: 1px solid rgba(26, 77, 109, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+            color: #1a4d6d;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            font-size: 22px;
+            flex-shrink: 0;
+            min-width: 48px;
+        }
+        
+        .send-btn:hover:not(:disabled) {
+            background: rgba(26, 77, 109, 0.2);
+            border-color: rgba(26, 77, 109, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .send-btn.active {
+            background: linear-gradient(135deg, #1a4d6d 0%, #2c5f7f 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(26, 77, 109, 0.3);
+        }
+        
+        /* Visualization */
+        .visualization-container {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            margin-top: 12px;
+        }
+        
+        .visualization-chart {
+            width: 100%;
+            height: 400px;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 20px;
+        }
+        
+        .dashboard-chart-item {
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 12px;
+            padding: 16px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        .dashboard-chart-item h3 {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .dashboard-chart-container {
+            width: 100%;
+            height: 320px;
+        }
+        
+        .error {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+        
+        .info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #93c5fd;
+            color: #1e40af;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+        
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(26, 77, 109, 0.2);
+            border-top-color: #1a4d6d;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(26, 77, 109, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(26, 77, 109, 0.5);
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .sidebar {
+                width: 260px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .message-content {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="newChat()">
+                    New Chat
+                </button>
+            </div>
+            
+            <div class="conversation-list" id="conversationList">
+                <p style="color: #9ca3af; font-size: 13px; padding: 12px; text-align: center;">
+                    No conversations yet
+                </p>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button onclick="clearHistory()">Clear All</button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1>Data Insights</h1>
+            </div>
+            
+            <!-- Chat Area -->
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome-section">
+                    <svg class="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="2" x2="12" y2="22"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    <h2>Data Insights Assistant</h2>
+                    <p>Upload a CSV or Excel file and ask questions about your data</p>
+                </div>
+            </div>
+            
+            <!-- Input Section -->
+            <div class="input-section">
+                <div id="messageBox" style="display: none;"></div>
+                <div id="fileName" style="font-size: 14px; color: #9ca3af; margin-bottom: 12px; display: none;">No file selected</div>
+                
+                <div class="input-wrapper">
+                    <div class="file-input-wrapper">
+                        <button class="upload-icon-btn" onclick="document.getElementById('fileInput').click()" title="Upload file">
+                            🔗
+                        </button>
+                        <input 
+                            type="file" 
+                            id="fileInput" 
+                            accept=".csv,.xlsx,.xls"
+                            onchange="handleFileUpload(event)"
+                        >
+                    </div>
+                    <div class="query-input-container">
+                        <textarea 
+                            id="queryInput" 
+                            placeholder="Ask something about your data..."
+                            onkeydown="handleInputKeydown(event)"
+                            disabled
+                            rows="1"
+                        ></textarea>
+                    </div>
+                    <div class="chart-options" id="chartOptions" style="display: none;">
+                        <div class="chart-toggle">
+                            <span title="Enable visualizations">Chart</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="chartToggle" onchange="toggleChartType()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <select class="chart-type-select" id="chartType" style="display: none;" onchange="updateChartType()">
+                            <option value="auto">Auto</option>
+                            <option value="bar">Bar</option>
+                            <option value="line">Line</option>
+                            <option value="pie">Pie</option>
+                            <option value="scatter">Scatter</option>
+                            <option value="box">Box</option>
+                            <option value="heatmap">Heat Map</option>
+                            <option value="treemap">Tree Map</option>
+                            <option value="dashboard">Dashboard</option>
+                        </select>
+                    </div>
+                    <button class="send-btn" id="sendBtn" onclick="submitQuery()" disabled>
+                        ➤
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFilePath = null;
+        let conversations = JSON.parse(localStorage.getItem('conversations')) || [];
+        let currentConversationId = null;
+        let currentChatId = null;
+        let chartEnabled = false;
+        let chartType = 'auto';
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversations();
+            autoResizeTextarea();
+        });
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const fileNameEl = document.getElementById('fileName');
+            fileNameEl.textContent = 'Uploading...';
+            fileNameEl.style.display = 'block';
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showMessage('error', data.error);
+                    fileNameEl.classList.add('empty');
+                    fileNameEl.textContent = 'No file selected';
+                    fileNameEl.style.display = 'none';
+                    uploadedFilePath = null;
+                } else {
+                    uploadedFilePath = data.filepath;
+                    fileNameEl.classList.remove('empty');
+                    fileNameEl.textContent = `✓ ${data.filename}`;
+                    fileNameEl.style.display = 'block';
+                    document.getElementById('queryInput').disabled = false;
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('chartOptions').style.display = 'flex';
+                    showMessage('info', `File "${data.filename}" uploaded successfully!`);
+                    newChat();
+                }
+            })
+            .catch(error => {
+                showMessage('error', 'Error uploading file: ' + error.message);
+                fileNameEl.classList.add('empty');
+                fileNameEl.textContent = 'No file selected';
+                fileNameEl.style.display = 'none';
+                uploadedFilePath = null;
+            });
+        }
+        
+        function toggleChartType() {
+            const toggle = document.getElementById('chartToggle');
+            const select = document.getElementById('chartType');
+            chartEnabled = toggle.checked;
+            select.style.display = chartEnabled ? 'block' : 'none';
+        }
+        
+        function updateChartType() {
+            chartType = document.getElementById('chartType').value;
+        }
+        
+        function handleInputKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                submitQuery();
+            }
+        }
+        
+        function autoResizeTextarea() {
+            const textarea = document.getElementById('queryInput');
+            textarea.addEventListener('input', () => {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+            });
+        }
+        
+        function submitQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            
+            if (!query) return;
+            if (!uploadedFilePath) {
+                showMessage('error', 'Please upload a file first');
+                return;
+            }
+            
+            // Add user message to chat
+            addMessageToChat('user', query);
+            document.getElementById('queryInput').value = '';
+            document.getElementById('queryInput').style.height = 'auto';
+            
+            // Create new chat only if this is the first message
+            if (!currentChatId) {
+                currentChatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+            
+            // Add loading indicator
+            const loadingId = addMessageToChat('assistant', '<div class="loading-spinner"></div>');
+            const loadingElement = document.querySelector(`[data-id="${loadingId}"]`);
+            
+            if (!loadingElement) {
+                console.error('Loading element not found');
+                return;
+            }
+            
+            const filename = document.getElementById('fileName').textContent.replace('✓ ', '');
+            
+            fetch('/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    query: query,
+                    filepath: uploadedFilePath,
+                    chartEnabled: chartEnabled,
+                    chartType: chartType,
+                    filename: filename,
+                    chatId: currentChatId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    const errorElement = document.querySelector(`[data-id="${loadingId}"]`);
+                    if (errorElement) {
+                        errorElement.querySelector('.message-bubble').innerHTML = `<div class="error">${escapeHtml(data.error)}</div>`;
+                    }
+                } else {
+                    if (data.chatId) {
+                        currentChatId = data.chatId;
+                    }
+                    
+                    const responseElement = document.querySelector(`[data-id="${loadingId}"]`);
+                    if (responseElement) {
+                        displayResponseWithVisualization(responseElement.querySelector('.message-bubble'), data.response, data.visualization);
+                        if (data.visualization) {
+                            responseElement.setAttribute('data-visualization', JSON.stringify(data.visualization));
+                        }
+                    }
+                }
+                saveConversation();
+            })
+            .catch(error => {
+                const errorElement = document.querySelector(`[data-id="${loadingId}"]`);
+                if (errorElement) {
+                    errorElement.querySelector('.message-bubble').innerHTML = `<div class="error">Error: ${escapeHtml(error.message)}</div>`;
+                }
+            });
+        }
+
+        function displayResponseWithVisualization(container, response, visualization) {
+            // Preserve line breaks and formatting by converting newlines to <br> tags
+            const formattedResponse = escapeHtml(response).replace(/\n/g, '<br>');
+            let html = '';
+            if (formattedResponse.trim()) {
+                html = `<div style="white-space: pre-wrap; word-wrap: break-word; margin-bottom: 16px;">${formattedResponse}</div>`;
+            }
+            
+            if (chartEnabled && visualization) {
+                if (visualization.error) {
+                    html += '<div class="error">Unable to load visualization at this time. Please try again later.</div>';
+                    container.innerHTML = html;
+                    return;
+                }
+                
+                const isDashboard = chartType === 'dashboard';
+                
+                if (isDashboard && visualization.layouts) {
+                    html += '<div class="visualization-container"><div class="dashboard-grid" id="tempDashboard"></div></div>';
+                    container.innerHTML = html;
+                    
+                    try {
+                        renderDashboardInChat(document.getElementById('tempDashboard'), visualization);
+                    } catch (e) {
+                        console.error('Dashboard render error:', e);
+                        container.innerHTML = html.replace('<div class="dashboard-grid" id="tempDashboard"></div>', 
+                            '<div class="error">Unable to load visualization at this time. Please try again later.</div>');
+                    }
+                } else if (visualization.echartsOption) {
+                    html += '<div class="visualization-container"><div class="visualization-chart" id="tempChart"></div></div>';
+                    container.innerHTML = html;
+                    
+                    try {
+                        const chartDiv = document.getElementById('tempChart');
+                        const chart = echarts.init(chartDiv);
+                        chart.setOption(visualization.echartsOption);
+                        window.addEventListener('resize', () => chart.resize());
+                    } catch (e) {
+                        console.error('Chart render error:', e);
+                        container.innerHTML = html.replace('<div class="visualization-chart" id="tempChart"></div>', 
+                            '<div class="error">Unable to load visualization at this time. Please try again later.</div>');
+                    }
+                } else {
+                    html += '<div class="error">Unable to load visualization at this time. Please try again later.</div>';
+                    container.innerHTML = html;
+                }
+            } else {
+                container.innerHTML = html;
+            }
+        }
+        
+        function renderDashboardInChat(container, dashboardData) {
+            container.innerHTML = '';
+            if (dashboardData.layouts && Array.isArray(dashboardData.layouts)) {
+                dashboardData.layouts.forEach((layout, index) => {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'dashboard-chart-item';
+                    
+                    const title = document.createElement('h3');
+                    title.textContent = layout.meta?.title || `Chart ${index + 1}`;
+                    
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'dashboard-chart-container';
+                    chartContainer.id = `chat-dashboard-chart-${index}`;
+                    
+                    chartDiv.appendChild(title);
+                    chartDiv.appendChild(chartContainer);
+                    container.appendChild(chartDiv);
+                    
+                    if (layout.echartsOption) {
+                        const chart = echarts.init(chartContainer);
+                        chart.setOption(layout.echartsOption);
+                        window.addEventListener('resize', () => chart.resize());
+                    }
+                });
+            }
+        }
+        
+        function addMessageToChat(role, content, visualization = null) {
+            const chatContainer = document.getElementById('chatContainer');
+            
+            // Remove welcome section if first message
+            const welcomeSection = chatContainer.querySelector('.welcome-section');
+            if (welcomeSection) welcomeSection.remove();
+            
+            const messageId = `msg-${Date.now()}`;
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.dataset.id = messageId;
+            
+            if (visualization) {
+                messageDiv.setAttribute('data-visualization', JSON.stringify(visualization));
+            }
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? 'U' : 'AI';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = content;
+            
+            contentDiv.appendChild(bubble);
+            
+            if (role === 'assistant') {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(contentDiv);
+            } else {
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(avatar);
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return messageId;
+        }
+        
+        function showMessage(type, message) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.className = type;
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            
+            if (type === 'info') {
+                setTimeout(() => messageBox.style.display = 'none', 3000);
+            }
+        }
+        
+        function newChat() {
+            currentConversationId = null;
+            currentChatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            
+            const welcome = document.createElement('div');
+            welcome.className = 'welcome-section';
+            welcome.innerHTML = `
+                <svg class="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="2" x2="12" y2="22"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                <h2>Data Insights Assistant</h2>
+                <p>Start asking questions about your data</p>
+            `;
+            chatContainer.appendChild(welcome);
+            
+            loadConversations();
+        }
+        
+        function saveConversation() {
+            if (!currentConversationId) return;
+            
+            const conv = conversations.find(c => c.id === currentConversationId);
+            if (conv) {
+                const messages = Array.from(document.querySelectorAll('.message'));
+                conv.messages = messages.map((msg, index) => {
+                    const msgObj = {
+                        role: msg.classList.contains('user') ? 'user' : 'assistant',
+                        content: msg.querySelector('.message-bubble').innerHTML
+                    };
+                    
+                    const vizData = msg.getAttribute('data-visualization');
+                    if (vizData) {
+                        msgObj.visualization = JSON.parse(vizData);
+                    }
+                    
+                    return msgObj;
+                });
+                
+                if (conv.messages.length > 0) {
+                    const firstUserMsg = conv.messages.find(m => m.role === 'user');
+                    if (firstUserMsg) {
+                        conv.title = firstUserMsg.content.substring(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '');
+                    }
+                }
+            }
+            
+            localStorage.setItem('conversations', JSON.stringify(conversations));
+        }
+        
+        function loadConversation(chatId) {
+            currentChatId = chatId;
+            
+            fetch(`/get-chat/${chatId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const chatContainer = document.getElementById('chatContainer');
+                    chatContainer.innerHTML = '';
+                    
+                    data.messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message ${msg.role}`;
+                        
+                        if (msg.visualization) {
+                            messageDiv.setAttribute('data-visualization', JSON.stringify(msg.visualization));
+                        }
+                        
+                        const avatar = document.createElement('div');
+                        avatar.className = 'message-avatar';
+                        avatar.textContent = msg.role === 'user' ? 'U' : 'AI';
+                        
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'message-content';
+                        const bubble = document.createElement('div');
+                        bubble.className = 'message-bubble';
+                        
+                        if (msg.role === 'assistant') {
+                            // Preserve line breaks and formatting for assistant messages
+                            const formattedContent = escapeHtml(msg.content).replace(/\n/g, '<br>');
+                            if (formattedContent.trim()) {
+                                bubble.innerHTML = `<div style="white-space: pre-wrap; word-wrap: break-word; margin-bottom: 16px;">${formattedContent}</div>`;
+                            }
+                            if (msg.visualization) {
+                                renderVisualizationInBubble(bubble, msg.visualization);
+                            }
+                        } else {
+                            bubble.innerHTML = `<div style="white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(msg.content)}</div>`;
+                        }
+                        
+                        contentDiv.appendChild(bubble);
+                        
+                        if (msg.role === 'assistant') {
+                            messageDiv.appendChild(avatar);
+                            messageDiv.appendChild(contentDiv);
+                        } else {
+                            messageDiv.appendChild(contentDiv);
+                            messageDiv.appendChild(avatar);
+                        }
+                        chatContainer.appendChild(messageDiv);
+                    });
+                    
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    loadConversations();
+                })
+                .catch(error => console.error('Error loading chat:', error));
+        }
+
+        function renderVisualizationInBubble(bubble, visualization) {
+            if (visualization.error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = 'Unable to load visualization at this time. Please try again later.';
+                bubble.appendChild(errorDiv);
+                return;
+            }
+            
+            const isDashboard = visualization.layouts && Array.isArray(visualization.layouts);
+            
+            if (isDashboard) {
+                const container = document.createElement('div');
+                container.className = 'visualization-container';
+                
+                const dashboardGrid = document.createElement('div');
+                dashboardGrid.className = 'dashboard-grid';
+                
+                visualization.layouts.forEach((layout, index) => {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'dashboard-chart-item';
+                    
+                    const title = document.createElement('h3');
+                    title.textContent = layout.meta?.title || `Chart ${index + 1}`;
+                    
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'dashboard-chart-container';
+                    chartContainer.id = `load-dashboard-chart-${index}-${Date.now()}`;
+                    
+                    chartDiv.appendChild(title);
+                    chartDiv.appendChild(chartContainer);
+                    dashboardGrid.appendChild(chartDiv);
+                    
+                    setTimeout(() => {
+                        if (layout.echartsOption) {
+                            try {
+                                const chart = echarts.init(chartContainer);
+                                chart.setOption(layout.echartsOption);
+                                window.addEventListener('resize', () => chart.resize());
+                            } catch (e) {
+                                console.error('Chart render error:', e);
+                                chartContainer.innerHTML = '<div class="error">Unable to render chart</div>';
+                            }
+                        }
+                    }, 100);
+                });
+                
+                container.appendChild(dashboardGrid);
+                bubble.appendChild(container);
+            } else if (visualization.echartsOption) {
+                const container = document.createElement('div');
+                container.className = 'visualization-container';
+                
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'visualization-chart';
+                chartDiv.id = `load-chart-${Date.now()}`;
+                
+                container.appendChild(chartDiv);
+                bubble.appendChild(container);
+                
+                setTimeout(() => {
+                    try {
+                        const chart = echarts.init(chartDiv);
+                        chart.setOption(visualization.echartsOption);
+                        window.addEventListener('resize', () => chart.resize());
+                    } catch (e) {
+                        console.error('Chart render error:', e);
+                        chartDiv.innerHTML = '<div class="error">Unable to render chart</div>';
+                    }
+                }, 100);
+            } else {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = 'Unable to load visualization at this time. Please try again later.';
+                bubble.appendChild(errorDiv);
+            }
+        }
+        
+        function loadConversations() {
+            const convList = document.getElementById('conversationList');
+            
+            fetch('/get-conversations')
+                .then(response => response.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        convList.innerHTML = '<p style="color: #9ca3af; font-size: 13px; padding: 12px; text-align: center;">No conversations yet</p>';
+                        return;
+                    }
+                    
+                    convList.innerHTML = '';
+                    data.forEach(conv => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'conversation-item-wrapper';
+                        if (conv.chatId === currentChatId) {
+                            wrapper.classList.add('active');
+                        }
+                        
+                        const button = document.createElement('button');
+                        button.className = 'conversation-item';
+                        button.textContent = conv.question.substring(0, 35) + (conv.question.length > 35 ? '...' : '');
+                        button.title = conv.question;
+                        button.onclick = () => loadConversation(conv.chatId);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-chat-btn';
+                        deleteBtn.innerHTML = '✕';
+                        deleteBtn.title = 'Delete conversation';
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            deleteChat(conv.chatId);
+                        };
+                        
+                        wrapper.appendChild(button);
+                        wrapper.appendChild(deleteBtn);
+                        convList.appendChild(wrapper);
+                    });
+                })
+                .catch(error => console.error('Error loading conversations:', error));
+        }
+
+        function deleteChat(chatId) {
+            if (confirm('Delete this conversation?')) {
+                fetch(`/delete-chat/${chatId}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (currentChatId === chatId) {
+                                newChat();
+                            }
+                            loadConversations();
+                            showMessage('info', 'Conversation deleted');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting chat:', error);
+                        showMessage('error', 'Failed to delete conversation');
+                    });
+            }
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all conversations? This cannot be undone.')) {
+                fetch('/clear-all', { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            newChat();
+                            showMessage('info', 'All conversations cleared');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing history:', error);
+                        showMessage('error', 'Failed to clear history');
+                    });
+            }
+        }
+        
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
