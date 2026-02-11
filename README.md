@@ -134,11 +134,7 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}  # Supported formats
 ├── templates/
 │   ├── home.html              # Home page
 │   └── index.html             # Main application interface
-└── uploads/                   # Uploaded dataset storage
-    ├── employee_data.csv
-    ├── employee_data_large.csv
-    ├── flipkart_sales_10k.csv
-    └── sales_data_large.csv
+
 ```
 
 ## 🔌 API Endpoints
@@ -324,3 +320,4 @@ This project is proprietary and confidential.
 
 **Last Updated**: February 2026
 **Version**: 1.0.0
+
